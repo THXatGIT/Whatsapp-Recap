@@ -2,7 +2,7 @@
 
 This program takes in a WhatsApp text file and generates an image of a summary of its content
 
-![](https://drive.google.com/file/d/1dvQ8cEPnr10Mc-iDZwAmnAL2ehDnVZcd/preview)
+![](https://drive.google.com/uc?export=view&id=1dvQ8cEPnr10Mc-iDZwAmnAL2ehDnVZcd)
 
 # **Content includes:**
 
