@@ -40,3 +40,9 @@ By Year, by Month by Day or by Hour
 8. Now your WhatsApp Recap is ready! 
 9. Press 'Preview Image' to see the recap
 10. Press 'Save Recap' to save the recap into the computer if you like it :D
+
+# **Bugs log**
+1. Repeated long messages would reduce number of the messages seen in top 5 longest messages
+2. Bar graphs with few messages have number labels going off the charts
+3. The text in top 5 longest messages extend beyond the message box
+4. Count of messages is off by 1
