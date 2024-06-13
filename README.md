@@ -46,3 +46,5 @@ By Year, by Month by Day or by Hour
 2. Bar graphs with few messages have number labels going off the charts
 3. The text in top 5 longest messages extend beyond the message box
 4. Count of messages is off by 1
+
+Note: this is for andriod txt files only
