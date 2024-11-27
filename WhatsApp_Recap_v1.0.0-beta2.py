@@ -70,7 +70,7 @@ ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 root=tk.Tk()
 # get images
 mascots=[ImageTk.PhotoImage(Image.open(resource_path(f"mascot/Whatsapp Recap Mascot{i}.png")).resize((90,78))) for i in range(1,6)]
-root.wm_iconphoto(False, mascots[0])
+root.wm_iconphoto(True, mascots[0])
 root.title('WhatsApp Recap v1.0.0-beta1')
 root.geometry('1920x1080')
 table=None
@@ -114,9 +114,10 @@ recaphour2.set("All")
 complete=tk.Label(root,font=(canvafont,17),fg='#0fd012')
 recaps=[recapyear,recapmonth,recapday,recaphour]
 rangerecaps=[recapyear2,recapmonth2,recapday2,recaphour2]
+filteredtextstring=''
 # #main code below
 def recapfunc():
-    global txtfile,complete,bg,bg2,group,recapyear,recapmonth,recapday,recaphour,listofyears,listofhour,listofdays,table,AI
+    global txtfile,complete,bg,bg2,group,recapyear,recapmonth,recapday,recaphour,listofyears,listofhour,listofdays,table,AI,filteredtextstring
     plt.rcParams['font.family']=['STKaiti']
     year=[]
     month=[]
@@ -291,6 +292,7 @@ def recapfunc():
         complete.grid(row=5,column=0)
         return
     # print(table.loc[tonum(table["month"])==1])
+    filteredtextstring="".join(f"{u}:{m}\n" for u, m in zip(user,message))
 
     msglen=[len(i) for i in message]
 
@@ -814,79 +816,86 @@ tk.Button(root,text="Save Recap",image=mascots[4],font=(canvafont,17),fg='#0fd01
 root.columnconfigure(0,weight=1)
 for i in range(1,5):
     root.columnconfigure(i,weight=1)
-#Instructions NOTE: Deal with scrolling and button position later
-# Guide https://github.com/flatplanet/Intro-To-TKinter-Youtube-Course/blob/master/full_scroll.py
-instructframe=tk.Frame(root)
-instructframe.grid(row=10,column=1,columnspan=4, sticky='news')
-instructcanvas=tk.Canvas(instructframe) #Because scroll bar can't be applied on a frame
-instructcanvas.pack(side='left', fill='both', expand=1)
-instructscrollbar=tk.Scrollbar(instructframe,orient='vertical',command=instructcanvas.yview)
-instructscrollbar.pack(side='right', fill='y')
-#Apparently I need to configure my canvas?
-# Configure The Canvas
-instructcanvas.configure(yscrollcommand=instructscrollbar.set)
-instructcanvas.bind('<Configure>', lambda e: instructcanvas.configure(scrollregion = instructcanvas.bbox("all")))
-#need another frame
-frameinframe=tk.Frame(instructcanvas)
-# Add that New frame To a Window In The Canvas
-instructcanvas.create_window((0,0), window=frameinframe, anchor="nw")
-#https://stackoverflow.com/questions/17355902/tkinter-binding-mousewheel-to-scrollbar
-def onmousewheel(event):
-    instructcanvas.yview_scroll(-1 * int((event.delta / 120)), "units")
-frameinframe.bind_all('<MouseWheel>',onmousewheel)
-Instructions_heading=tk.Label(frameinframe,text='\nInstructions',font=(canvafont,18),fg='#0fd012')
-Instructions= tk.Label(frameinframe,text="""
-1. Go to WhatsApp 
-2. Click the three dots at the top left of your selected WhatsApp chat group
-3. Click 'More' > 'Export Chat'
-4. Download the text file into the computer
-4. Go to this app
-5. Press 'Select WhatsApp Text File' and select a WhatsApp text file
-6. Press 'Recap WhatsApp'
-7. Wait 3s
-8. Now your WhatsApp Recap is ready! 
-9. Press 'Preview Image' to see the recap
-10. Press 'Save Recap' to save the recap into the computer if you like it :D
+#Instructions
 
-Additional Settings:
-There are 4 different setting:
-Name, Overall, Previous and Custom
+def showinstructions():
+    # It has acended due to space constraints
+    secondwindow=tk.Toplevel()
+    secondwindow.title('Instructions')
+    secondwindow.geometry('1280x1080')
+    # Guide https://github.com/flatplanet/Intro-To-TKinter-Youtube-Course/blob/master/full_scroll.py
+    instructframe=tk.Frame(secondwindow)
+    # row=10,column=1,columnspan=4, 
+    instructframe.pack(fill='both',expand=1)
+    instructcanvas=tk.Canvas(instructframe) #Because scroll bar can't be applied on a frame
+    instructcanvas.pack(side='left', fill='both', expand=1)
+    instructscrollbar=tk.Scrollbar(instructframe,orient='vertical',command=instructcanvas.yview)
+    instructscrollbar.pack(side='right', fill='y')
+    #Apparently I need to configure my canvas?
+    # Configure The Canvas
+    instructcanvas.configure(yscrollcommand=instructscrollbar.set)
+    instructcanvas.bind('<Configure>', lambda e: instructcanvas.configure(scrollregion = instructcanvas.bbox("all")))
+    #need another frame
+    frameinframe=tk.Frame(instructcanvas)
+    # Add that New frame To a Window In The Canvas
+    instructcanvas.create_window((0,0), window=frameinframe, anchor="nw")
+    #https://stackoverflow.com/questions/17355902/tkinter-binding-mousewheel-to-scrollbar
+    def onmousewheel(event):
+        instructcanvas.yview_scroll(-1 * int((event.delta / 120)), "units")
+    frameinframe.bind_all('<MouseWheel>',onmousewheel)
+    Instructions_heading=tk.Label(frameinframe,text='\nInstructions',font=(canvafont,18),fg='#0fd012')
+    Instructions= tk.Label(frameinframe,text="""
+    1. Go to WhatsApp 
+    2. Click the three dots at the top left of your selected WhatsApp chat group
+    3. Click 'More' > 'Export Chat'
+    4. Download the text file into the computer
+    4. Go to this app
+    5. Press 'Select WhatsApp Text File' and select a WhatsApp text file
+    6. Press 'Recap WhatsApp'
+    7. Wait 3s
+    8. Now your WhatsApp Recap is ready! 
+    9. Press 'Preview Image' to see the recap
+    10. Press 'Save Recap' to save the recap into the computer if you like it :D
 
-Name
-Select who you want to recap after selecting the text file
+    Additional Settings:
+    There are 4 different setting:
+    Name, Overall, Previous and Custom
 
-Overall
-Recaps the whole text file. (Default)
+    Name
+    Select who you want to recap after selecting the text file
 
-Previous
-Recaps previous
-Year, Month or day
+    Overall
+    Recaps the whole text file. (Default)
 
-Custom
-Recaps any custom date and date range
-If ONLY Year or Month or day or hour is selected, that is what is recapped
+    Previous
+    Recaps previous
+    Year, Month or day
 
-If Two catergories are selected, 
-For year and month, it just works like you think
-For year and day/hour, It recaps the range of days/hours selected between the years
-For month and day/hour, It recaps the range of days/hours selected between the months
-For day and hour, it recaps the range of hours selected within the days
+    Custom
+    Recaps any custom date and date range
+    If ONLY Year or Month or day or hour is selected, that is what is recapped
 
-If Three Catergories are selected,
-For Year, Month and Day, it works like you think
-For Year, Month and Hour, It recaps the range of hours selected between the year and months
-For Year, Day and Hour, I can't be bothered, this is beyond useless
-For Month, Day and Hour, It recaps all the month, days and hours ranges given across all available 
-Whatsapp Years.
+    If Two catergories are selected, 
+    For year and month, it just works like you think
+    For year and day/hour, It recaps the range of days/hours selected between the years
+    For month and day/hour, It recaps the range of days/hours selected between the months
+    For day and hour, it recaps the range of hours selected within the days
 
-If all are selected, it works like you think.
+    If Three Catergories are selected,
+    For Year, Month and Day, it works like you think
+    For Year, Month and Hour, It recaps the range of hours selected between the year and months
+    For Year, Day and Hour, I can't be bothered, this is beyond useless
+    For Month, Day and Hour, It recaps all the month, days and hours ranges given across all available 
+    Whatsapp Years.
 
-Less recent dates at the top, more recent dates at the bottom
-Ensure both catergories are filled if the range functions are selected.
-"""
-,justify='left',font=(canvafont,15),fg='#0fd012')
-Instructions_heading.grid()
-Instructions.grid()
+    If all are selected, it works like you think.
+
+    Less recent dates at the top, more recent dates at the bottom
+    Ensure both catergories are filled if the range functions are selected.
+    """
+    ,justify='left',font=(canvafont,15),fg='#0fd012')
+    Instructions_heading.grid()
+    Instructions.grid()
 # Instructionsshowing=False
 # def showinstructions():
 #     global Instructions_heading, Instructions,Instructionsshowing,Instructbutton
@@ -900,8 +909,31 @@ Instructions.grid()
 #         Instructions.grid_remove()
 #         Instructbutton.config(text='Show Instructions')
 #         Instructionsshowing=False
-# Instructbutton=tk.Button(root,text='Show Instructions',command=showinstructions)
-# Instructbutton.grid(row=9,column=1,columnspan=4)
+Instructbutton=tk.Button(root,text='Show Instructions',command=showinstructions)
+Instructbutton.grid(row=9,column=1,columnspan=4)
+
+#Ai summary
+def showsummary():
+    global filteredtextstring
+    summarylevel=tk.Toplevel()
+    summarylevel.title('Summary')
+    summarylevel.geometry('540x540')
+    Aisummary=tk.Text(summarylevel)
+    disclaimer=tk.Label(summarylevel,text="The outputs does not neccessary reflect the creator's ideology and what it says may not be true.")
+    Aisummary.grid()
+    disclaimer.grid()
+    Aisummary.insert(tk.END, "Loading Summary!")
+    root.update() #to even get it to open before the code runs
+    summary=summarise(filteredtextstring)
+    Aisummary.delete(1.0,tk.END)
+    Aisummary.insert(tk.END,chars=summary)
+
+
+Summarybutton=tk.Button(root, text="Get chat Summary",command=showsummary)
+Summarybutton.grid(row=9,column=0)
+
+
+
 #filter
 prevfilter=tk.StringVar()
 recapfilter=tk.IntVar()
