@@ -119,6 +119,7 @@ filteredtextstring=''
 def recapfunc():
     global txtfile,complete,bg,bg2,group,recapyear,recapmonth,recapday,recaphour,listofyears,listofhour,listofdays,table,AI,filteredtextstring
     plt.rcParams['font.family']=['STKaiti']
+    iosmode=False
     year=[]
     month=[]
     date=[]
@@ -132,41 +133,68 @@ def recapfunc():
     timename=['12AM','1AM', '2AM', '3AM', '4AM', '5AM', '6AM', '7AM', '8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM', '7PM', '8PM', '9PM', '10PM', '11PM']
     datename=['Monday','Tuesday','Wednesday',"Thursday","Friday","Saturday","Sunday"]
     timedict={j:i for i,j in zip(listofhour,timename)}
+    dandt=[]
     with open(txtfile, 'r',encoding='utf-8') as chats:
-        for chat in chats.readlines():
-            try:
-                if chat[2 and 5] == '/':
-                    user.append(chat[20:chat.index(':',20)])
-                    year.append(chat[6:10])
-                    month.append(chat[3:5])
-                    date.append(chat[:2])
-                    # dateofweek.append(datetime.datetime(int(chat[6:10]),int(chat[3:5]),int(chat[:2])).strftime("%A"))
-                    hr.append(chat[12:14])
-                    min.append(chat[15:17])
-                                                                                                #HUH?
-                    if ' This message was deleted\n' in chat or ' <Media omitted>\n' in chat or ' <Media omitted>\n' ' POLL:\n'in chat:
-                        # TAKE NOTE
-                        message.append(' ')
+        defunct=chats.readlines()
+        if  '[' in defunct[0] and ']' in defunct[0]: #Check for ios mode or not
+            iosmode=True
+            for chat in defunct:
+                if  '[' in chat and ']' in chat:
+                    user.append(chat[chat.index(']')+2:chat.index(':',chat.index(']'))])
+                    dandt.append(datetime.datetime.strptime(chat[chat.index('[')+1:chat.index(']')], "%d/%m/%y, %I:%M:%S %p"))
+                    if chat.split()[-1]=='omitted' or 'POLL:' in chat or "This message was deleted." in chat or "You deleted this message." in chat:
+                        message.append('') #Title of POll remains...
+                    elif "Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them." in chat or chat.split()[-4:]=="changed the group description".split() or "created group “" in chat or "changed this group's settings" in chat or chat.split()[-2:]=='added you'.split() or "changed the group name to “" in chat or f"added {user[-1]}" in chat:
+                        user=user[:-1]
+                        dandt=dandt[:-1]
+                        if "created group “" in chat or "changed the group name to “"in chat:
+                            group=chat[chat.index('“')+1:chat.index('”')]
+                        continue # this is an attempt to remove chatlogs
+                    else:
+                        message.append(chat[chat.index(':',chat.index(']'))+2:-1])
+                else:
+                    if 'OPTION:' not in chat:
+                        message[-1]+=chat
+                #ends here
+            chats.close()
+        else:
+            for chat in defunct:
+                try:
+                    if chat[2 and 5] == '/':
+                        user.append(chat[20:chat.index(':',20)])
+                        dandt.append(datetime.datetime.strptime(chat[:17], "%d/%m/%Y, %H:%M"))
+                        # year.append(chat[6:10])
+                        # month.append(chat[3:5])
+                        # date.append(chat[:2])
+                        # hr.append(chat[12:14])
+                        # min.append(chat[15:17])
+                                                                                                    #HUH?
+                        if ' This message was deleted\n' in chat or ' <Media omitted>\n' in chat or ' <Media omitted>\n' ' POLL:\n'in chat:
+                            # TAKE NOTE
+                            message.append(' ')
+                        else:
+                            #to remove the \n at the end
+                            message.append(chat[chat.index(':',20)+2:])
                     else:
                         #to remove the \n at the end
-                        message.append(chat[chat.index(':',20)+2:])
-                else:
-                    #to remove the \n at the end
-                    message[-1]+=chat
-            except IndexError: 
-                if len(message)>0:
-                    #to remove the \n at the end
-                    message[-1]+=chat
-            except ValueError:
-                #TO remove any messages which records changes such as leaving members or change in description
-                continue
-        chats.close()
-    message=[i[:-1] for i in message]
+                        message[-1]+=chat
+                except IndexError: 
+                    if len(message)>0:
+                        #to remove the \n at the end
+                        message[-1]+=chat
+                except ValueError:
+                    #TO remove any messages which records changes such as leaving members or change in description
+                    continue
+            chats.close()
+            message=[i[:-1] for i in message]
     # daytime=[datetime.datetime(int(i),int(j),int(k)) for i,j,k in zip(year,month,date)]
-    dandt=[datetime.datetime(int(y),int(m),int(d),int(hr),int(min)) for y,m,d,hr,min in zip(year,month,date,hr,min)]
+    # dandt=[datetime.datetime(int(y),int(m),int(d),int(hr),int(min)) for y,m,d,hr,min in zip(year,month,date,hr,min)]
     #Table filter
     # table=df({"user":user,"year":year,"month":month,"date":date,"dateofweek":dateofweek,"hr":hr,"min":min,"message":message,"daytime":daytime})
     table=df({'user':user,"msg":message,"d&t":dandt})
+    if iosmode:
+        table=table.loc[table["user"]!=group]
+
     # Prevents impossible dates from entering
     if recapmonth.get()!="All" and recapday.get()!="All":
         try:
@@ -892,6 +920,12 @@ def showinstructions():
 
     Less recent dates at the top, more recent dates at the bottom
     Ensure both catergories are filled if the range functions are selected.
+    
+    Once a file is selected, you may opt for the AI option on the right.
+    
+    Press "Get Chat Summary" to get the summary. 
+                           
+    Do take note that all these AI functions takes lots of time especially when the messages are long
     """
     ,justify='left',font=(canvafont,15),fg='#0fd012')
     Instructions_heading.grid()
