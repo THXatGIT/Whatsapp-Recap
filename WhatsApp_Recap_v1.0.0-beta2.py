@@ -346,6 +346,7 @@ def recapfunc():
     # User Chat count
     if recapname.get()!="All":
         chatsperuser=piebar('Chats of user%',[len(user),len(namerank)-len(user)],[recapname.get(),"Others"],[len(user),len(namerank)-len(user)],'Total Chats','User')
+        chatdic={f"{recapname.get()}":len(user)} #Stupid error
     else:
         chatdic={}
         for i in user:
