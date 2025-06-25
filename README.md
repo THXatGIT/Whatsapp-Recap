@@ -107,3 +107,6 @@ Ensure both catergories are filled if the range functions are selected.
 4. Summarisation only works for English
 
 Note: This should work for both android and IOS files
+
+Refer to the NOAI branch for a lightweight version without AI 
+https://github.com/THXatGIT/Whatsapp-Recap/tree/NOAI
