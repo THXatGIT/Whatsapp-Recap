@@ -2,7 +2,7 @@
 
 This program takes in a WhatsApp text file and generates an image of a summary of its content
 
-![](https://drive.google.com/uc?export=view&id=1dvQ8cEPnr10Mc-iDZwAmnAL2ehDnVZcd)
+![UI](https://github.com/THXatGIT/Whatsapp-Recap/blob/Work-in-progress/Just%20for%20show%202.png)
 
 # **Content includes:**
 
@@ -20,7 +20,7 @@ This program takes in a WhatsApp text file and generates an image of a summary o
 
 -Word cloud of top 100 used words and a bar graph of top ten used words.
 
-# ** $${\color{yellow}NEW}$$ **
+# $${\color{#00ff00}NEW}$$
 - The recap is now even more oragnised with more features
 
 - Added better filters
