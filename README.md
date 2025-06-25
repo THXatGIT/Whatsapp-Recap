@@ -18,7 +18,28 @@ This program takes in a WhatsApp text file and generates an image of a summary o
 
 -Top 5 longest messages, a short snippet of it, length of message, who sent it, at what time and date,
 
--Word cloud of top 100 used words and a bar graph of to ten used words with length.
+-Word cloud of top 100 used words and a bar graph of top ten used words.
+
+# ** $${\color{yellow}NEW}$$ **
+- The recap is now even more oragnised with more features
+
+- Added better filters
+  
+- Tapping the overall recap button now resets the settings without the need to press the save settings
+
+- Added Year count graph
+
+- Add Day count graph
+
+- Added Top longest words and Lexicon Count*
+  
+- Added Bar Chart for top 10 most used emojis
+
+- Sentiment Analysis Function
+
+- Summarisation function**
+
+** Summarisation is a different button and is not included in summary image.
 
 # **Filters:**
 
@@ -27,6 +48,8 @@ By Overall
 By previous Year, Month, day
 
 By Year, by Month by Day or by Hour
+
+By date range
 
 # **Instructions:**
 1. Go to WhatsApp 
@@ -41,10 +64,46 @@ By Year, by Month by Day or by Hour
 9. Press 'Preview Image' to see the recap
 10. Press 'Save Recap' to save the recap into the computer if you like it :D
 
-# **Bugs log**
-1. Repeated long messages would reduce number of the messages seen in top 5 longest messages
-2. Bar graphs with few messages have number labels going off the charts
-3. The text in top 5 longest messages extend beyond the message box
-4. Count of messages is off by 1
+Additional Settings:
+There are 4 different setting:
+Name, Overall, Previous and Custom
 
-Note: this is for andriod txt files only
+Name
+Select who you want to recap after selecting the text file
+
+Overall
+Recaps the whole text file. (Default)
+
+Previous
+Recaps previous
+Year, Month or day
+
+Custom
+Recaps any custom date and date range
+If ONLY Year or Month or day or hour is selected, that is what is recapped
+
+If Two catergories are selected, 
+For year and month, it just works like you think
+For year and day/hour, It recaps the range of days/hours selected between the years
+For month and day/hour, It recaps the range of days/hours selected between the months
+For day and hour, it recaps the range of hours selected within the days
+
+If Three Catergories are selected,
+For Year, Month and Day, it works like you think
+For Year, Month and Hour, It recaps the range of hours selected between the year and months
+For Year, Day and Hour, I can't be bothered, this is beyond useless
+For Month, Day and Hour, It recaps all the month, days and hours ranges given across all available 
+Whatsapp Years.
+
+If all are selected, it works like you think.
+
+Less recent dates at the top, more recent dates at the bottom
+Ensure both catergories are filled if the range functions are selected.
+
+# **Bugs log**
+1. Chats which are too long would be unable to generate sentiment analysis.
+2. Program will stop if nothing happens on that day.
+3. Top longest words and lexicon count does not work for languages which are not separated by space*
+4. Summarisation only works for English
+
+Note: This should work for both android and IOS files
