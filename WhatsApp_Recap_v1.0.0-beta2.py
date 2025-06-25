@@ -3,19 +3,16 @@
 #Tapping the overall recap button now resets the settings without the need to press the save settings
 # Added Year count graph
 # Program will stop if nothing happens on that day
-#bug1 floating numbers in bar graph with small values (fixed)
-#bug2 repeated long message not counted(resolved)
-#bug3 Count of message is still wrong (resolved)
-#bug4 longest messages get out of box(resolved)
 #bug5 if no messages are sent on a specific time range, error would be thrown
-#bug6 Long words (resolved)
+#font be wonk
 
-#Have image be on toplevel than photos
-#Add Summarizer
+#Have image be on toplevel than photos (Nevermind)
+#Added Summarizer
 #add warnings
 #add bump chart for frequency of words?
 import os
 import sys
+from string import punctuation as punc
 import emoji as e
 from imojify import imojify as imoj
 from random import randint
@@ -304,7 +301,7 @@ def recapfunc():
             filteredtable=filteredtable.loc[table['d&t'].dt.hour==int(timedict[recaphour.get()])]
     if recapname.get()!="All":
         namerank=user=filteredtable["user"].to_list()
-        msglenrank=[len(i) for i in filteredtable["message"].to_list()]
+        msglenrank=[len(i) for i in filteredtable["msg"].to_list()]
         filteredtable=filteredtable.loc[table["user"]==recapname.get()]
     user=filteredtable["user"].to_list()
     year=filteredtable['d&t'].dt.strftime("%Y").to_list()
@@ -332,7 +329,7 @@ def recapfunc():
         global group
         plt.rcParams.update({'font.size': 15})
         fig,(pie,bar)=plt.subplots(1,2,figsize=(20,10))
-        fig.suptitle(group+' '+title)
+        fig.suptitle(group+' '+title,fontsize=40)
         pie.pie(piedata, autopct='%1.1f%%',pctdistance=1.1,startangle=90,counterclock=False)
         # pie.legend(labels=dic.keys(),loc='lower left',bbox_to_anchor=(-0.2,0))
         bar.barh(list(bardatax)[::-1],list(bardatay)[::-1],color=(15/255,208/255,17/255))
@@ -380,7 +377,7 @@ def recapfunc():
             ax.bar_label(ax.containers[0], label_type='edge')
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        ax.set_title(title)
+        ax.set_title(title, fontsize=30)
         fig.canvas.draw()
         plt.close()
         return Image.fromarray(np.array(fig.canvas.renderer.buffer_rgba()))
@@ -419,10 +416,10 @@ def recapfunc():
     wordlist=[]
     wordfreq={}
     for i in message:
-        for j in i.lower().split():
-            wordlist.append(j)
+        for j in i.lower().translate(str.maketrans(dict.fromkeys(punc))).split():
+            wordlist.append(j) #removes punctuations
     for i in wordlist:
-        if i in wordfreq and i not in wc.STOPWORDS and i not in e.EMOJI_DATA:
+        if i in wordfreq and i not in wc.STOPWORDS and not any(k in i for k in e.EMOJI_DATA) and not i.isnumeric(): #oops, might take longer now
             wordfreq[i]+=1
         else:
             wordfreq[i]=1
@@ -433,7 +430,7 @@ def recapfunc():
     wordcloud=wc.WordCloud(font_path=kaiti,width=800, height=400,background_color='white',max_words=100,color_func=lambda *args, **kwargs: (15,208,17)).generate((" ").join(message))
     plt.clf()
     fig,(wcld,bar)=plt.subplots(1,2,figsize=(20,10))
-    fig.suptitle(group+' WordCloud')
+    fig.suptitle(group+' WordCloud',fontsize=30)
     wcld.imshow(wordcloud)
     wcld.axis("off")
     bar.barh(list(wordfreq.keys())[::-1],list(wordfreq.values())[::-1],color=(15/255,208/255,17/255))
@@ -467,7 +464,7 @@ def recapfunc():
     ax.bar_label(ax.containers[0], label_type='edge')
     ax.set_xlabel('Emoji Frequency')
     ax.set_ylabel('Emoji')
-    ax.set_title('Frequently used emojis')
+    ax.set_title('Frequently used emojis',fontsize=30)
     ax.invert_yaxis()
     for i,j in enumerate(list(emodict.keys())[:10]):
         getemoji = plt.imread(imoj.get_img_path(j))
@@ -492,13 +489,14 @@ def recapfunc():
     rcap=ImageDraw.Draw(recapimg)
     sentircap=ImageDraw.Draw(sentirecapimg)
     # Chinese text and length giving me problems :/ NOTE: probably try noto font?
+    # Try combining Canva with Kaiti and (arial with kaiti) Segoe ui?
     def drawtext (pos,text,size,align="left",surface=rcap):
         global bg
         bfont=ImageFont.truetype(canvafont,150)
         sfont=ImageFont.truetype(canvafont,50)
         cfont=ImageFont.truetype(kaiti,50)
         msgfont=ImageFont.truetype(arial,35)
-        cmsgfont=ImageFont.truetype(resource_path('C:\Windows\Fonts\msyhl.ttc'),30)
+        cmsgfont=ImageFont.truetype(resource_path('C:\Windows\Fonts\msyh.ttc'),30) #Looks better when it's not light    
         timefont=ImageFont.truetype(arial,20)
         ctimefont=ImageFont.truetype(kaiti,20)
         w,h=pos
@@ -626,10 +624,14 @@ def recapfunc():
                 wordlist.add(j)
     wordlist=sorted(sorted(list(wordlist)),key=len,reverse=True)
     drawtext((-400,1100),"The TOP 3 \nlongest words used are:","small","center",surface=sentircap)
-    for index, word in enumerate(wordlist[:2]):
+    for index, word in enumerate(wordlist[:3]):
         if len(word)>20:
             wordlist[index]=word[:20]+"..."
-    sentircap.text((100,1250),f"1.{wordlist[0]}\n2.{wordlist[1]}\n3.{wordlist[2]}",fill=(15,208,17), font=ImageFont.truetype(canvafont,50),stroke_width=10, stroke_fill='white')
+    for index, word in enumerate(wordlist[:3]):
+        if word.isascii():
+            sentircap.text((100,1250+index*80),f"{index+1}.{word}",fill=(15,208,17), font=ImageFont.truetype(canvafont,50),stroke_width=10, stroke_fill='white')
+        else:
+            sentircap.text((100,1250+index*80),f"{index+1}.{word}",fill=(15,208,17), font=ImageFont.truetype(kaiti,30),stroke_width=10, stroke_fill='white')
     sentircap.line((794,1000,794,1500),width=4,fill=(15,208,17))
     drawtext((400,1100),f"There is a total of \n{len(wordlist)} \nUNIQUE words used\n(excluding links or numbers)","small","center",surface=sentircap)
     drawline(1500,sentircap)
@@ -682,7 +684,7 @@ def recapfunc():
                 colourgradient.insert(0,(1,0,0,abs(i)))
         ax.barh(list(usermeanrating.keys())[::-1],list(usermeanrating.values())[::-1],color=colourgradient)
         ax.bar_label(ax.containers[0], label_type='edge')
-        ax.set_title(f"Mean rating of {group} users")
+        ax.set_title(f"Mean rating of {group} users",fontsize=30)
         ax.set_xlabel("Sentiment score: Negative(-1), Neutral(0), Positive(1)")
         ax.set_ylabel("Users")
         fig.canvas.draw()
@@ -708,7 +710,7 @@ def recapfunc():
         ax.barh(y_locs+0.3,list(usernegrating.values())[::-1],0.3,color=(240/255,47/255,238/255))
         ax.set_xlabel("Scores")
         ax.set_ylabel("Users")
-        ax.set_title(f"Total ratings of {group} users")
+        ax.set_title(f"Total ratings of {group} users",fontsize=30)
         ax.set(yticks=np.arange(len(list(chatdic.keys()))), yticklabels=list(chatdic.keys())[::-1])
         fig.canvas.draw()
         plt.close()
@@ -1116,17 +1118,7 @@ hour_header2=tk.Label(root,text="Hour")
 namefilter.grid(row=0,column=1,columnspan=4,*names)
 defautoption.grid(row=1,column=1,columnspan=4)
 previousoption.grid(row=2,column=1,columnspan=4)
-# previousfilter.grid(row=1,column=3,sticky="W")
 customoption.grid(row=3,column=1,columnspan=4)
-# year_header.grid(row=3,column=1,pady=10)
-# month_header.grid(row=3,column=2,pady=10)
-# day_header.grid(row=3,column=3,pady=10)
-# hour_header.grid(row=3,column=4,pady=10)
-# yearfilter.grid(row=4,column=1)
-# monthfilter.grid(row=4,column=2)
-# dayfilter.grid(row=4,column=3)
-# hourfilter.grid(row=4,column=4)
-# savesettings.grid(row=5,column=1,columnspan=4,pady=10)
 def close():
     root.quit()
     root.destroy()
