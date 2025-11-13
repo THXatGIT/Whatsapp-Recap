@@ -26,7 +26,7 @@ from pandas import concat
 from pandas import to_numeric as tonum
 import numpy as np
 import matplotlib.pyplot as plt 
-from matplotlib import font_manager
+from matplotlib import font_manager as fm
 from matplotlib.offsetbox import OffsetImage,AnnotationBbox
 import wordcloud as wc
 from PIL import Image,ImageDraw,ImageFont,ImageTk
@@ -68,7 +68,10 @@ def fontwrap(font,text,paragraphs):
         wrappedtext+=line
     return wrappedtext
 myappid = 'mycompany.myproduct.subproduct.version' # arbitrary string
-ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+try:
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+except AttributeError:
+    pass
 # init tk page
 root=tk.Tk()
 # get images
@@ -78,7 +81,6 @@ root.title('WhatsApp Recap noai v1.1.0')
 root.geometry('1920x1080')
 table=None
 txtfile=''
-filename=''
 complete=''
 bg=''
 bg2=None
@@ -103,9 +105,9 @@ recapname.set('All')
 listofyears=[i for i in range(2009,datetime.date.today().year+1)]
 listofdays=[i for i in range(1,32)]
 listofhour=['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23']
-canvafont=resource_path("CanvaSans-Bold.otf")
-kaiti=resource_path("C:\Windows\Fonts\STKaiti.ttf")
-arial=resource_path("C:/Windows/Fonts/arial.ttf")
+canvafont=resource_path("fonts/CanvaSans-Bold.otf")
+kaiti=resource_path("fonts/STKaiti.ttf")
+arial=resource_path("fonts/arial.ttf")
 directory='C:/'
 
 daterangeactive=False
@@ -117,10 +119,32 @@ complete=tk.Label(root,font=(canvafont,17),fg='#0fd012')
 recaps=[recapyear,recapmonth,recapday,recaphour]
 rangerecaps=[recapyear2,recapmonth2,recapday2,recaphour2]
 filteredtextstring=''
+recapbutton=''
+filename=tk.Label(root,font=(canvafont,17),fg='#0fd012')
+# Mass Recap
+def massrecap():
+    global txtfile,finalbg
+    txtfilecopy=txtfile
+    for i in txtfilecopy:
+        txtfile=i
+        recapfunc()
+        finalbg.save(f"{group} Whatsapp Recap.png")
+    # For efficiency, Preview and save buttons would be disabled, all images would be automatically saved
+    txtfile=txtfilecopy
+    complete.config(text=f'Separate Recap of {len(txtfile)} Files Complete!\n Both have been automatically saved')
+    complete.grid(row=5,column=0)
 # #main code below
 def recapfunc():
     global txtfile,complete,bg,bg2,finalbg,group,recapyear,recapmonth,recapday,recaphour,listofyears,listofhour,listofdays,table,AI,filteredtextstring
-    plt.rcParams['font.family']=['STKaiti']
+    # To get fonts from fonts folder only so fonts won't be a problem across systems
+    plt.rcParams['font.family']="sans-serif"
+    fm.fontManager.addfont("fonts/STKaiti.ttf")
+    fm.fontManager.addfont("fonts/arial.ttf")
+    f1 = fm.FontProperties(fname='fonts/arial.ttf')
+    f2=fm.FontProperties(fname='fonts/STKaiti.ttf')
+    print([f1.get_name(),f2.get_name()])
+    plt.rcParams["font.sans-serif"]=[f2.get_name()]
+    #---
     iosmode=False
     year=[]
     month=[]
@@ -163,7 +187,7 @@ def recapfunc():
             complete.grid(row=5,column=0)
             return
     #Filter time!
-    filteredtable=table
+    filteredtable=table.loc[~table['user'].str.contains("System")] #~ means invert
     #more complicated filter
     #note to self, prevent smaller dates at bottom and ensure catergories are filled
     if daterangeactive:
@@ -439,7 +463,7 @@ def recapfunc():
         sfont=ImageFont.truetype(canvafont,50)
         cfont=ImageFont.truetype(kaiti,50)
         msgfont=ImageFont.truetype(arial,35)
-        cmsgfont=ImageFont.truetype(resource_path('C:\Windows\Fonts\msyh.ttc'),30) #Looks better when it's not light    
+        cmsgfont=ImageFont.truetype(resource_path('fonts/msyh.ttc'),30) #Looks better when it's not light    
         timefont=ImageFont.truetype(arial,20)
         ctimefont=ImageFont.truetype(kaiti,20)
         w,h=pos
@@ -587,18 +611,30 @@ def recapfunc():
     complete.config(text=f'Recap of {group} Complete!')
     complete.grid(row=5,column=0)
 #tkinter window
-def selectxt():
-    global txtfile, filename,names,directory
-    if txtfile =='':
-        txtfile=filedialog.askopenfilename(initialdir=directory,title='Select WhatsApp Text File',filetypes=(("Text Files",'*.txt'),))
-        filename=tk.Label(root,text=txtfile[-txtfile[::-1].index('/'):] +'\nhas been selected',font=(canvafont,17),fg='#0fd012')
-        directory=txtfile[:-txtfile[::-1].index('/')]
-        filename.grid(row=3,column=0)
-        tk.Button(root,text='Recap Whatsapp',image=mascots[1],font=(canvafont,17),fg='#0fd012',bg='light green',compound=tk.LEFT,command=recapfunc).grid(row=4,column=0)
+def selectxt(): #more than a file at a time now! Yeah!
+    global txtfile, filename,names,directory,recapbutton
+    if not bool(txtfile):
+        recapbutton=tk.Button(root,text='Recap Whatsapp',image=mascots[1],font=(canvafont,17),fg='#0fd012',bg='light green',compound=tk.LEFT,command=massrecap)
+        recapbutton.grid(row=4,column=0)
+    txtfile=filedialog.askopenfilenames(initialdir=directory,title='Select WhatsApp Text File',filetypes=(("Text Files",'*.txt'),))
+    print(txtfile)
+    if len(txtfile)>1:
+        filename.config(text= f'{len(txtfile)} files have been selected')
+        tf=txtfile[0]
+        directory=tf[:-tf[::-1].index('/')]
+        namefilter.config(state='disabled')
+        previewimage.config(state='disabled')
+        saveimage.config(state='disabled')
+        recapbutton.config(command=massrecap)
     else:
-        txtfile=filedialog.askopenfilename(initialdir=directory,title='Select WhatsApp Text File',filetypes=(("Text Files",'*.txt'),))
-        filename.config(text=txtfile[-txtfile[::-1].index('/'):] +'\nhas been selected')
-        directory=directory=txtfile[:-txtfile[::-1].index('/')]
+        tf=txtfile=txtfile[0]
+        filename.config(text=tf[-tf[::-1].index('/'):] +'\nhas been selected')
+        directory=tf[:-tf[::-1].index('/')]
+        namefilter.config(state='normal')
+        previewimage.config(state='normal')
+        saveimage.config(state='normal')
+        recapbutton.config(command=recapfunc)
+    filename.grid(row=3,column=0)
     if len(names)!=0:
         names.clear()
     with open(txtfile, 'r',encoding='utf-8') as chats:
@@ -627,8 +663,10 @@ Title=tk.Label(root,text="Whatsapp Recap",font=(canvafont,50), fg='#0fd012').gri
 mascot1=tk.Label(root,image=mascots[0]).grid(row=1,column=0)
 select= tk.Button(root,text='Select WhatsApp Text File',font=(canvafont,17),fg='#0fd012',bg='light green',image=mascots[2],compound=tk.LEFT,command=selectxt)
 select.grid(row=2,column=0)
-tk.Button(root,text="Preview Image",image=mascots[3],font=(canvafont,17),fg='#0fd012',bg='light green',compound=tk.LEFT,command=imgshow).grid(row=6,column=0)
-tk.Button(root,text="Save Recap",image=mascots[4],font=(canvafont,17),fg='#0fd012',bg='light green',compound=tk.LEFT,command=saverecap).grid(row=7,column=0)
+previewimage=tk.Button(root,text="Preview Image",image=mascots[3],font=(canvafont,17),fg='#0fd012',bg='light green',compound=tk.LEFT,command=imgshow)
+saveimage=tk.Button(root,text="Save Recap",image=mascots[4],font=(canvafont,17),fg='#0fd012',bg='light green',compound=tk.LEFT,command=saverecap)
+previewimage.grid(row=6,column=0)
+saveimage.grid(row=7,column=0)
 #width adjustments
 root.columnconfigure(0,weight=1)
 for i in range(1,5):

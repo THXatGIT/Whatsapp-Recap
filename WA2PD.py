@@ -29,7 +29,14 @@ def to_pd(txtfile,group):
                     elif "This message was deleted."==text or "You deleted this message."==text:
                         message.append('')
                         chattype.append('TEXT')
-                    elif "Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them." in chat or chat.split()[-4:]=="changed the group description".split() or "created group “" in chat or "changed this group's settings" in chat or chat.split()[-2:]=='added you'.split() or "changed the group name to “" in chat or f"added {user[-1]}" in chat:
+                    elif "Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them." in chat\
+                     or "Messages and calls are end-to-end encrypted. Only people in this chat can read, listen to, or share them. Learn more." in chat\
+                    or chat.split()[-4:]=="changed the group description".split()\
+                    or "created group “" in chat\
+                    or "changed this group's settings" in chat\
+                    or chat.split()[-2:]=='added you'.split()\
+                    or "changed the group name to “" in chat\
+                    or f"added {user[-1]}" in chat:
                         user[-1]="System"
                         message.append(text)
                         chattype.append("LOG")
@@ -63,8 +70,17 @@ def to_pd(txtfile,group):
                         #to remove the \n at the end
                         message.append(text)
                         chattype.append("TEXT")
-                else:
-                    if "Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them." in chat or chat.split()[-4:]=="changed the group description".split() or "created group “" in chat or "changed this group's settings" in chat or chat.split()[-2:]=='added you'.split() or "changed the group name to “" in chat or f"added {user[-1]}" in chat:
+                else: 
+                    #First conditional is for older ver
+                    # and there is a problem for added ...
+                    if "Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them." in chat \
+                    or "Messages and calls are end-to-end encrypted. Only people in this chat can read, listen to, or share them. Learn more." in chat\
+                    or chat.split()[-4:]=="changed the group description".split() \
+                    or "created group “" in chat \
+                    or "changed this group's settings" in chat \
+                    or chat.split()[-2:]=='added you'.split() \
+                    or "changed the group name to “" in chat \
+                    or f"added {user[-1]}" in chat:
                         user.append("System")
                         dandt.append(datetime.datetime.strptime(chat[:17], "%d/%m/%Y, %H:%M"))
                         message.append(chat[chat.index('-')+2:])
