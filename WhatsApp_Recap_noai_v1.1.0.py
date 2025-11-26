@@ -17,6 +17,7 @@
 #add bump chart for frequency of words?
 import os
 import sys
+import threading
 from string import punctuation as punc
 import emoji as e
 from imojify import imojify as imoj
@@ -25,6 +26,8 @@ from pandas import DataFrame as df
 from pandas import concat
 from pandas import to_numeric as tonum
 import numpy as np
+import matplotlib
+matplotlib.use('agg')#To deal with seg fault from running threads?
 import matplotlib.pyplot as plt 
 from matplotlib import font_manager as fm
 from matplotlib.offsetbox import OffsetImage,AnnotationBbox
@@ -137,6 +140,8 @@ def massrecap():
 def recapfunc():
     global txtfile,complete,bg,bg2,finalbg,group,recapyear,recapmonth,recapday,recaphour,listofyears,listofhour,listofdays,table,AI,filteredtextstring
     # To get fonts from fonts folder only so fonts won't be a problem across systems
+    complete.config(text='Starting Recap...') # Threading done! Msg1
+    complete.grid(row=5,column=0)
     plt.rcParams['font.family']="sans-serif"
     fm.fontManager.addfont("fonts/STKaiti.ttf")
     fm.fontManager.addfont("fonts/arial.ttf")
@@ -160,6 +165,10 @@ def recapfunc():
     datename=['Monday','Tuesday','Wednesday',"Thursday","Friday","Saturday","Sunday"]
     timedict={j:i for i,j in zip(listofhour,timename)}
     table,group=to_pd(txtfile,group)
+    #input validation
+    if not group:
+        complete.config(text=f"This file is invalid")
+        complete.grid(row=5,column=0)
     # Prevents impossible dates from entering
     if recapmonth.get()!="All" and recapday.get()!="All":
         try:
@@ -288,7 +297,7 @@ def recapfunc():
     filteredtextstring="".join(f"{u}:{m}\n" for u, m in zip(user,message))
 
     msglen=[len(i) for i in message]
-
+    complete.config(text='Creating graphs...') # Threading done! Msg2
     #Longest messages
     longmsg=sorted(list(set(message)),key=len,reverse=True)[0:5]
     tuples=[(date[message.index(i)],monthname[month[message.index(i)]],year[message.index(i)],user[message.index(i)],hr[message.index(i)],min[message.index(i)],len(i)) for i in longmsg]
@@ -444,7 +453,7 @@ def recapfunc():
     emograph=Image.fromarray(np.array(fig.canvas.renderer.buffer_rgba()))
     plt.close()
 
-
+    complete.config(text='Compiling graphs...') # Threading done! Msg3
     #PIL stuff
     recapimg=Image.new("RGB",(1588,2245*2))
     bg=Image.open(resource_path("background.png")).resize((1588,2245))
@@ -633,7 +642,7 @@ def selectxt(): #more than a file at a time now! Yeah!
         namefilter.config(state='normal')
         previewimage.config(state='normal')
         saveimage.config(state='normal')
-        recapbutton.config(command=recapfunc)
+        recapbutton.config(command=threading.Thread(target=recapfunc).start)
     filename.grid(row=3,column=0)
     if len(names)!=0:
         names.clear()

@@ -3,16 +3,22 @@ from pandas import DataFrame as df
 import re
 def to_pd(txtfile,group):
     ''' This function converts the Whatsapp text files to Pandas Dataframe
-        to_pd(txtfile,group) --> returns DataFrame, groupname(str)'''
+        to_pd(txtfile,group) --> returns DataFrame, groupname(str)
+        
+        returns False twice if input file is invalid
+        '''
     user=[]
     chattype=[]
     message=[]
     dandt=[]
+    input_val=re.compile("((?<!.)\d\d\/\d\d\/\d\d\d\d, \d\d:\d\d -)|(?<!.)\[\d{1,2}\/\d{1,2}\/\d{2}, \d:\d\d:\d\d.[A|P]M\]") #stricter requirements for input validation
     with open(txtfile, 'r',encoding='utf-8') as chats:
         # ? is for non-greedy and the one in round brackets is to make sure nothing is behind it
         ios=re.compile("(?<!.)\[.*?\]") #regex pattern for ios whatsapp export format
         android=re.compile("(?<!.)..\/..\/.*,.*?:.*?:") #These regex is used to separate human from system messages
         chatlist=chats.readlines()
+        if not input_val.match(chatlist[0]):
+            return False,False
         if ios.match(chatlist[0]) : #Check for ios mode or not
             iosmode=True
             for chat in chatlist:
