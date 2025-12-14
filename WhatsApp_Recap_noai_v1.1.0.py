@@ -16,6 +16,7 @@
 #add warnings
 #add bump chart for frequency of words?
 import os
+import re
 import sys
 import threading
 from string import punctuation as punc
@@ -195,8 +196,11 @@ def recapfunc():
             complete.config(text=f"This date does not exist")
             complete.grid(row=5,column=0)
             return
+    #Age of Chat
+    birth=table['d&t'].min()
     #Filter time!
-    filteredtable=table.loc[~table['user'].str.contains("System")] #~ means invert
+    filteredtable=table.loc[~table['user'].str.contains("System")]#~ means invert
+    systemtable= table.loc[table['user'].str.contains("System")] 
     #more complicated filter
     #note to self, prevent smaller dates at bottom and ensure catergories are filled
     if daterangeactive:
@@ -343,7 +347,126 @@ def recapfunc():
                 lendic[person]=msglen[id]
         lendic=dict(sorted(lendic.items(), key=lambda item: item[1],reverse=True))
         locchatsperuser=piebar('Length of Chats per user',lendic.values(),lendic.keys(),lendic.values(),'Total Length of Chats','User')
-    
+    # chain stuff
+    chaindict={}
+    currname=user[0]
+    currchainlen=0
+    maxchainlen=0
+    chainend=0
+    for c,i in enumerate(user):
+        if i==currname:
+            currchainlen+=1
+        else:
+            if currchainlen>maxchainlen:
+                maxchainlen=currchainlen 
+                chainend=c #the index of the next message after the longest chain
+            if currname in chaindict:
+                if chaindict[currname]<currchainlen:
+                    chaindict[currname]=currchainlen
+            else:
+                chaindict[currname]=currchainlen
+            currname=i
+            currchainlen=1
+    # I'll add the streak stuf here
+    longeststreaks={}
+    for u in set(user):
+        maxstreak=1
+        currstreak=1
+        streakrange=[]
+        userdates=filteredtable.loc[filteredtable['user']==u]['d&t'].to_list()
+        currstartdate=userdates[0]
+        currenddate=userdates[0]
+        for i,d in enumerate(userdates[:-1]):
+            if (userdates[i+1]-d).days==1:
+                currstreak+=1
+                currenddate=userdates[i+1]
+            elif (userdates[i+1]-d).days>1:
+                 # This makes it such that if there are two long streaks, the earlier one would be it
+                streakrange=[currstartdate,currenddate] if currstreak>maxstreak else streakrange
+                maxstreak=currstreak if currstreak>maxstreak else maxstreak 
+                currstreak=1
+                currstartdate=userdates[i+1]
+                currenddate=userdates[i+1]
+        streakrange=[currstartdate,currenddate] if currstreak>=maxstreak else streakrange
+        maxstreak=currstreak if currstreak>maxstreak else maxstreak
+        longeststreaks[u]={'maxstreak':maxstreak,"streakrange":streakrange}
+    longeststreaks=dict(sorted(longeststreaks.items(), key=lambda item: item[1]["maxstreak"],reverse=True))
+    # print(longeststreaks)
+    plt.clf()
+    fig,ax=plt.subplots(figsize=(20,10))
+    ax.barh(list(longeststreaks.keys()),[i['maxstreak'] for i in list(longeststreaks.values())],color=(15/255,208/255,17/255))
+    ax.bar_label(ax.containers[0], label_type='edge')
+    ax.set_xlabel('User')
+    ax.set_ylabel('Longest Streak')
+    ax.set_title('Longest streak per user',fontsize=30)
+    ax.invert_yaxis()
+    fig.canvas.draw()
+    streakgraph=Image.fromarray(np.array(fig.canvas.renderer.buffer_rgba()))
+    plt.close()
+
+
+            
+    # finally
+    if currchainlen>maxchainlen:
+        maxchainlen=currchainlen 
+        chainend=c
+    if currname in chaindict:
+        if chaindict[currname]<currchainlen:
+                chaindict[currname]=currchainlen
+    else:
+        chaindict[currname]=currchainlen
+    chaindict=dict(sorted(chaindict.items(), key=lambda item: item[1],reverse=True))
+    # print(message[chainend-maxchainlen:chainend])
+    # print(message[chainend-1])
+    #chain graph
+    plt.clf()
+    fig,ax=plt.subplots(figsize=(20,10))
+    ax.barh(list(chaindict.keys())[:10],list(chaindict.values())[:10],color=(15/255,208/255,17/255))
+    ax.bar_label(ax.containers[0], label_type='edge')
+    ax.set_xlabel('User')
+    ax.set_ylabel('Longest uninterrupted chain length')
+    ax.set_title('Longest uninterrupted chain per user',fontsize=30)
+    ax.invert_yaxis()
+    fig.canvas.draw()
+    chaingraph=Image.fromarray(np.array(fig.canvas.renderer.buffer_rgba()))
+    plt.close()
+    #links counter
+    with open(txtfile,'r',encoding='utf-8') as f:
+        linklist=re.findall(r"(?:(?:https?):\/\/(?:www\.)?)?[a-zA-Z0-9@-]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:%_\+.~#?&//=]*",f.read()) # for all intents and purposes, this would work :sad:
+        f.close()
+    #still have to filter because regex is not complete.
+    linklist=list(filter(lambda x: '@' not in x,linklist))
+    #Remember to convert to set later to count uniques links, unique subdomains,unique domains
+    subdomaindict={}
+    for i in linklist:
+        subdomain=re.search(r"[\w|\d]+\.?[\w|\d]+\.[\w|\d]+",i.lower())
+        if subdomain:
+            if subdomain.group() in subdomaindict:
+                subdomaindict[subdomain.group()]+=1
+            else:
+                subdomaindict[subdomain.group()]=1
+    domaindict={}
+    for i in subdomaindict.keys():
+        domain=re.search(r"(?:[\w|\d]+\.)?([\w|\d]+\.[\w|\d]+)",i)
+        if domain:
+            if domain.group(1) in domaindict: # the one is for the second capture group
+                domaindict[domain.group(1)]+=subdomaindict[i]
+            else:
+                domaindict[domain.group(1)]=subdomaindict[i]
+    domaindict=dict(sorted(domaindict.items(), key=lambda x: x[1],reverse=True))
+    #Domain graph
+    plt.clf()
+    fig,ax=plt.subplots(figsize=(20,10))
+    ax.barh(list(domaindict.keys())[:10],list(domaindict.values())[:10],color=(15/255,208/255,17/255))
+    ax.bar_label(ax.containers[0], label_type='edge')
+    ax.set_xlabel('Domain Frequency')
+    ax.set_ylabel('Domain')
+    ax.set_title('Frequently linked Domains 🌐',fontsize=30)
+    ax.invert_yaxis()
+    fig.canvas.draw()
+    urlgraph=Image.fromarray(np.array(fig.canvas.renderer.buffer_rgba()))
+    plt.close()
+
     def bargraph(xdata,ydata,title,xlabel,ylabel,width=10,barlabel=True):
         fig,ax=plt.subplots(figsize=(width,5))
         # for index, value in enumerate(ydata):
@@ -357,7 +480,6 @@ def recapfunc():
         fig.canvas.draw()
         plt.close()
         return Image.fromarray(np.array(fig.canvas.renderer.buffer_rgba()))
-    
     # Messages per time (hr)
     lst=[]
     for i in listofhour:
@@ -423,16 +545,34 @@ def recapfunc():
         lst.append(dateofweek.count(i))
     hfd=datename[lst.index(max(lst))]
     messageperdow=bargraph(datename,lst,"Messages per Day of Week",'Day of Week',"Messages")
-
+    # Time to put the media category to good use
+    media=filteredtable.loc[filteredtable['type'].str.contains('MEDIA')]
+    mediacount=len(media)
+    mediausers={u:media['user'].to_list().count(u) for u in set(media['user'].to_list())}
+    mediausers=dict(sorted(mediausers.items(),key= lambda item:item[1],reverse=True))
+    mediaperuser=piebar("Media sent per person",list(mediausers.values()),list(mediausers.keys()),list(mediausers.values()),"Users","Total Media")
     #emojitime!
     emodict={}
-    for m in message:
-        for i in m.split():
-            if i in e.EMOJI_DATA:
-                if i in emodict:
-                    emodict[i]+=1
-                else:
-                    emodict[i]=1
+    emopeopledict={}# iwant it to be {name:{'count':int, emojis:{emoji:count,emoji:count ...}}
+    emojicount=0
+    for idx, m in enumerate(message):
+        elist=e.emoji_list(m) #previous counter was erronous
+        for i in elist:
+            emojicount+=1
+            if i['emoji'] in emodict:
+                emodict[i['emoji']]+=1
+            else:
+                emodict[i['emoji']]=1
+            if user[idx] in emopeopledict:
+                emopeopledict[user[idx]]["count"]+=1
+            else:
+                emopeopledict[user[idx]]={'count':1,'emojis':{}}
+            if i['emoji'] in emopeopledict[user[idx]]['emojis']:
+                emopeopledict[user[idx]]["emojis"][i['emoji']]+=1
+            else:
+                emopeopledict[user[idx]]["emojis"][i['emoji']]=1
+    emopeopledict=dict(sorted(emopeopledict.items(),key= lambda item:item[1]['count'],reverse=True))
+    emoperuser=piebar(f"Emojis per person", [i['count'] for i in emopeopledict.values()],list(emopeopledict.keys()),[i['count'] for i in emopeopledict.values()],"Total Emojis","User")
     emodict=dict(sorted(emodict.items(), key=lambda item: item[1],reverse=True))
     plt.clf()
     fig,ax=plt.subplots(figsize=(20,10))
@@ -455,12 +595,15 @@ def recapfunc():
 
     complete.config(text='Compiling graphs...') # Threading done! Msg3
     #PIL stuff
-    recapimg=Image.new("RGB",(1588,2245*2))
+    recapimg=Image.new("RGB",(1588*2,2245*2))
     bg=Image.open(resource_path("background.png")).resize((1588,2245))
     Image.Image.paste(recapimg,bg)
     Image.Image.paste(recapimg,bg,(0,2245))
-    sentirecapimg=Image.new("RGB",(1588,2245*2))
+    Image.Image.paste(recapimg,bg,(1588,0))
+    Image.Image.paste(recapimg,bg,(1588,2245))
+    sentirecapimg=Image.new("RGB",(1588*2,2245*2))
     Image.Image.paste(sentirecapimg,bg)
+    Image.Image.paste(sentirecapimg,bg,(1588,0))
     Image.Image.paste(sentirecapimg,bg,(0,2245))
     rcap=ImageDraw.Draw(recapimg)
     sentircap=ImageDraw.Draw(sentirecapimg)
@@ -499,15 +642,20 @@ def recapfunc():
             _,_,w1,_=surface.textbbox((0,0),text,font=sfont,align=align)
             surface.text(((1588-w1)/2+w,h), text, fill=(15,208,17), font=cfont,stroke_width=3, stroke_fill='white',align=align)
     def drawline(ypos,surface=rcap):
-        surface.line((0,ypos,1588,ypos),width=4,fill=(15,208,17))
-    drawtext((0,0),"Whatsapp Rewind",'big')
+        surface.line((0,ypos,1588*2,ypos),width=4,fill=(15,208,17))
+    drawtext((1588/2,0),"Whatsapp Recap",'big')
     if recapname.get() != 'All':
         drawtext((0,200),f"{recapname.get()} in {group} has a total of",'small')
     else:
         drawtext((0,200),f"{group} has a total of",'small')
+    drawtext((1588,200),"and",'small')
     drawtext((0,250),f"{len(message)}",'big')
+    drawtext((1588,250),f"{emojicount}",'big')
+    drawtext((1588,2580),f"{mediacount}",'big')
     if recapfilter.get()==1:
         drawtext((0,425),"overall conversations!",'small')
+        drawtext((1588,425),"emojis used!",'small')
+        drawtext((1588,2805),"medias sent!",'small')
     elif recapfilter.get()==2:
         if prevfilter.get()!="Day":
             drawtext((0,425),f"conversations last {prevfilter.get().lower()}!",'small')
@@ -556,9 +704,21 @@ def recapfunc():
             drawtext((600,1105),f"{recapname.get()} had \n{sum(msglen)*100/sum(msglenrank):.1f}% \nof THE TALK ",'small',"center")
     else:
         drawtext((600,500),f"{list(chatdic)[0]} \nSent most of \nthe messages",'small',"center")
+        drawtext((2188,500),f"{list(emopeopledict.keys())[0]} \nSpammed \nMOST of \nthe emojis",'small',"center")
+        drawtext((2138,1100),f"{list(longeststreaks.keys())[0]} \n HELD the\nLONGEST\nDAILY\nSTREAK\nFrom:\n{list(longeststreaks.values())[0]['streakrange'][0].strftime('%Y-%m-%d %H:%M')}\nto\n{list(longeststreaks.values())[0]['streakrange'][1].strftime('%Y-%m-%d %H:%M')}",'small',"center")
+        drawtext((2188,2880),f"{list(mediausers.keys())[0]} \nDelivered \nMOST of \nthe media",'small',"center")
+        drawtext((1588,3600),f"This chat is now",'small',"center")
+        age=(datetime.datetime.now()-birth).days
+        drawtext((1588,3650),f"{age}",'big',"center")
+        drawtext((1588,3850),f"days old!",'small',"center")
+        drawtext((1588,3900),f"That's about {age//7} weeks or {round(age*12/365)} months or {age//365} years",'small',"center")
+        #TODO compare to human
         drawtext((600,1105),f"{list(lendic)[0]} \n Had the MOST \nto talk about",'small',"center")
     recapimg.paste(chatsperuser.resize((1200,600)),(0,500))
     recapimg.paste(locchatsperuser.resize((1200,600)),(0,1100))
+    recapimg.paste(emoperuser.resize((1200,600)),(1588,500))
+    recapimg.paste(streakgraph.resize((1100,550)),(1588,1100))
+    recapimg.paste(mediaperuser.resize((1200,600)),(1588,2880))
     drawtext((0,1710),"Here are the TOP 5 LONGEST messages",'small','center')
     for msg,data in zip(toplen.keys(),toplen.values()):
         num=list(toplen.keys()).index(msg)
@@ -571,7 +731,12 @@ def recapfunc():
         drawtext((1588/4,1810+165*num),f'{d} {m[:3]} {y}, {l} characters','small','center')
         drawtext((75,1790+160*num),f"~{n}",'name','center')
         drawtext((1588/2-55,1915+160*num),f'{h}:{mins}','time','center')
-    drawline(2585)
+    drawline(2585) 
+    # URL count 
+    drawtext((1588,1710),f"There was a total of {len(set(linklist))} unique links sent",'small','center')
+    drawtext((1588, 1810),f"Of which were {len(subdomaindict.keys())} unique subdomains",'small','center')
+    drawtext((1588, 1910),f"and {len(domaindict.keys())} unique domains",'small','center')
+    recapimg.paste(urlgraph.resize((1000,500)),(1882,2010))
     #section1
     drawtext((0,2580),"Some of you would have most likely been caught chatting...",'small')
     drawtext((-400,2655),f"in {hfy}",'small')
@@ -609,13 +774,40 @@ def recapfunc():
         else:
             sentircap.text((100,1250+index*80),f"{index+1}.{word}",fill=(15,208,17), font=ImageFont.truetype(kaiti,30),stroke_width=10, stroke_fill='white')
     drawtext((400,1100),f"There is a total of \n{len(wordlist)} \nUNIQUE words used\n(excluding links or numbers)","small","center",surface=sentircap)
+    # I'm just going to count unique characters
+    charlist=[]
+    punccount=0
+    for i in message:
+        for c in i:
+            if c not in charlist:
+                charlist.append(c)
+            if c in punc:
+                punccount+=1
+
+    drawtext((1200,1100),f"There is a total of \n{len(charlist)} \nUNIQUE characters used","small","center",surface=sentircap)
+    drawtext((2000,1100),f"There is a total of \n{punccount} \npunctuations used","small","center",surface=sentircap)
     drawline(1500,sentircap)
-    bg=recapimg.crop((0,0,1588,4150))
+    #chain stuff
+    sentirecapimg.paste(chaingraph.resize((1200,600)),(1588,0))
+    drawtext((2188,0),f"{list(chaindict.keys())[0]}\nHad the \nLONGEST\n CONSECUTIVE\n message chain","small","center",surface=sentircap)
+    drawtext((1588,600),f"{list(chaindict.keys())[0]}'s chain started on {daytime[chainend-maxchainlen]}","small","center",surface=sentircap)
+    drawtext((1200,650),f"It started with:","small","left",surface=sentircap)
+    drawtext((2100,650),f"And ended with:","small","left",surface=sentircap)
+    sentircap.rounded_rectangle((50+1588,750,1588+1588/2,900),fill=(217,253,211),radius=10)
+    sentircap.rounded_rectangle((50+1588+1588/2,750,1588*2,900),fill=(217,253,211),radius=10)
+    drawtext((75+1588,770),message[chainend-maxchainlen],'msg',surface=sentircap)
+    drawtext((75+1588,750),f"~{user[chainend-1]}",'name','center',surface=sentircap)
+    drawtext((1588/2-55+1588,750+150),f'{hr[chainend-maxchainlen]}:{min[chainend-maxchainlen]}','time','center',surface=sentircap)
+    drawtext((75+1588+1588/2,770),message[chainend-1],'msg',surface=sentircap)
+    drawtext((75+1588+1588/2,750),f"~{user[chainend-1]}",'name','center',surface=sentircap)
+    drawtext((1588-55+1588,750+150),f'{hr[chainend-1]}:{min[chainend-1]}','time','center',surface=sentircap)
+    # Finishing up
+    bg=recapimg.crop((0,0,1588*2,4150))
     bg2=sentirecapimg
     finalbg=Image.new('RGB',(bg.width,bg.height+bg2.height))
     finalbg.paste(bg,(0,0))
     finalbg.paste(bg2,(0,bg.height))
-    finalbg=finalbg.crop((0,0,1588,bg.height+1500))
+    finalbg=finalbg.crop((0,0,1588*2,bg.height+1500))
     # tkinter stuff
     complete.config(text=f'Recap of {group} Complete!')
     complete.grid(row=5,column=0)
@@ -707,6 +899,7 @@ def showinstructions():
     def onmousewheel(event):
         instructcanvas.yview_scroll(-1 * int((event.delta / 120)), "units")
     frameinframe.bind_all('<MouseWheel>',onmousewheel)
+    #TODO Realign the instructions
     Instructions_heading=tk.Label(frameinframe,text='\nInstructions',font=(canvafont,18),fg='#0fd012')
     Instructions= tk.Label(frameinframe,text="""
     1. Go to WhatsApp 

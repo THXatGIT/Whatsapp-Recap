@@ -16,6 +16,7 @@ def to_pd(txtfile,group):
         # ? is for non-greedy and the one in round brackets is to make sure nothing is behind it
         ios=re.compile("(?<!.)\[.*?\]") #regex pattern for ios whatsapp export format
         android=re.compile("(?<!.)..\/..\/.*,.*?:.*?:") #These regex is used to separate human from system messages
+        system=re.compile("(?<!.)..\/..\/.*,.*?:.*")
         chatlist=chats.readlines()
         if not input_val.match(chatlist[0]):
             return False,False
@@ -79,14 +80,15 @@ def to_pd(txtfile,group):
                 else: 
                     #First conditional is for older ver
                     # and there is a problem for added ...
-                    if "Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them." in chat \
-                    or "Messages and calls are end-to-end encrypted. Only people in this chat can read, listen to, or share them. Learn more." in chat\
-                    or chat.split()[-4:]=="changed the group description".split() \
-                    or "created group “" in chat \
-                    or "changed this group's settings" in chat \
-                    or chat.split()[-2:]=='added you'.split() \
-                    or "changed the group name to “" in chat \
-                    or f"added {user[-1]}" in chat:
+                    # if "Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them." in chat \
+                    # or "Messages and calls are end-to-end encrypted. Only people in this chat can read, listen to, or share them. Learn more." in chat\
+                    # or chat.split()[-4:]=="changed the group description".split() \
+                    # or "created group “" in chat \
+                    # or "changed this group's settings" in chat \
+                    # or chat.split()[-2:]=='added you'.split() \
+                    # or "changed the group name to “" in chat \
+                    # or f"added {user[-1]}" in chat:
+                    if system.match(chat):
                         user.append("System")
                         dandt.append(datetime.datetime.strptime(chat[:17], "%d/%m/%Y, %H:%M"))
                         message.append(chat[chat.index('-')+2:])
