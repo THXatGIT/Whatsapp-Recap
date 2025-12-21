@@ -1,5 +1,8 @@
 # **My first ever Python Program :DD**
 
+NOTE: WhatsApp Recap NOAI has been updated to v1.2.0-beta1 at https://github.com/THXatGIT/Whatsapp-Recap/tree/NOAI
+It's more updated than this branch
+
 This program takes in a WhatsApp text file and generates an image of a summary of its content
 
 ![](https://drive.google.com/uc?export=view&id=1dvQ8cEPnr10Mc-iDZwAmnAL2ehDnVZcd)
