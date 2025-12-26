@@ -36,10 +36,20 @@ import wordcloud as wc
 from PIL import Image,ImageDraw,ImageFont,ImageTk
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import messagebox
 import ctypes
 import datetime
-
+import traceback
 from WA2PD import to_pd
+def errorcatcher(func):
+    def wrapper():
+        try:
+            func()
+        except:
+            print(traceback.format_exc())
+            messagebox.showerror("Request","Please inform me about the issue stated by the following error message")
+            messagebox.showerror("Error!",traceback.format_exc())
+    return wrapper
 def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -135,9 +145,10 @@ def massrecap():
         finalbg.save(f"{group} Whatsapp Recap.png")
     # For efficiency, Preview and save buttons would be disabled, all images would be automatically saved
     txtfile=txtfilecopy
-    complete.config(text=f'Separate Recap of {len(txtfile)} Files Complete!\n Both have been automatically saved')
+    complete.config(text=f'Separate Recap of {len(txtfile)} Files Complete!\n All have been automatically saved')
     complete.grid(row=5,column=0)
 # #main code below
+@errorcatcher
 def recapfunc():
     global txtfile,complete,bg,bg2,finalbg,group,recapyear,recapmonth,recapday,recaphour,listofyears,listofhour,listofdays,table,AI,filteredtextstring
     # To get fonts from fonts folder only so fonts won't be a problem across systems
@@ -281,8 +292,13 @@ def recapfunc():
         if recaphour.get()!="All":
             filteredtable=filteredtable.loc[table['d&t'].dt.hour==int(timedict[recaphour.get()])]
     if recapname.get()!="All":
-        namerank=user=filteredtable["user"].to_list()
+        namerank=user=chainrank=filteredtable["user"].to_list()
         msglenrank=[len(i) for i in filteredtable["msg"].to_list()]
+        emojirank=sum(len(e.emoji_list(i)) for i in filteredtable["msg"].to_list())
+        mediarank=len(filteredtable.loc[filteredtable['type'].str.contains('MEDIA')])
+        #URGH! This is NOT efficient
+        dateclone=filteredtable["d&t"]
+        messageclone=filteredtable["msg"].to_list()
         filteredtable=filteredtable.loc[table["user"]==recapname.get()]
     user=filteredtable["user"].to_list()
     year=filteredtable['d&t'].dt.strftime("%Y").to_list()
@@ -323,7 +339,7 @@ def recapfunc():
         return Image.fromarray(np.array(fig.canvas.renderer.buffer_rgba()))
     # User Chat count
     if recapname.get()!="All":
-        chatsperuser=piebar('Chats of user%',[len(user),len(namerank)-len(user)],[recapname.get(),"Others"],[len(user),len(namerank)-len(user)],'Total Chats','User')
+        chatsperuser=piebar('Chats of user (%)',[len(user),len(namerank)-len(user)],[recapname.get(),"Others"],[len(user),len(namerank)-len(user)],'Total Chats','User')
     else:
         chatdic={}
         for i in user:
@@ -337,7 +353,7 @@ def recapfunc():
     # Length stuff
     plt.clf()
     if recapname.get()!="All":
-        locchatsperuser=piebar('Length of Chats of user%',[sum(msglen),sum(msglenrank)-sum(msglen)],[recapname.get(),"Others"],[sum(msglen),sum(msglenrank)-sum(msglen)],'Total Length of Chats','User')
+        locchatsperuser=piebar('Length of Chats user (%)',[sum(msglen),sum(msglenrank)-sum(msglen)],[recapname.get(),"Others"],[sum(msglen),sum(msglenrank)-sum(msglen)],'Total Length of Chats','User')
     else:
         lendic={}
         for id, person in enumerate(user):
@@ -353,7 +369,11 @@ def recapfunc():
     currchainlen=0
     maxchainlen=0
     chainend=0
-    for c,i in enumerate(user):
+    if recapname.get() == "All":
+        chainuser=user
+    else:
+        chainuser=chainrank
+    for c,i in enumerate(chainuser):
         if i==currname:
             currchainlen+=1
         else:
@@ -362,9 +382,14 @@ def recapfunc():
                 chainend=c #the index of the next message after the longest chain
             if currname in chaindict:
                 if chaindict[currname]<currchainlen:
-                    chaindict[currname]=currchainlen
+                    chaindict[currname]=currchainlen 
+                    if recapname.get()==currname:
+                        userchaininfo=chainend-1 #saved for later
+                        
             else:
                 chaindict[currname]=currchainlen
+                userchaininfo=chainend-1 #saved for later
+                
             currname=i
             currchainlen=1
     # I'll add the streak stuf here
@@ -377,10 +402,10 @@ def recapfunc():
         currstartdate=userdates[0]
         currenddate=userdates[0]
         for i,d in enumerate(userdates[:-1]):
-            if (userdates[i+1]-d).days==1:
+            if (userdates[i+1].date()-d.date()).days==1:
                 currstreak+=1
                 currenddate=userdates[i+1]
-            elif (userdates[i+1]-d).days>1:
+            elif (userdates[i+1].date()-d.date()).days>1:
                  # This makes it such that if there are two long streaks, the earlier one would be it
                 streakrange=[currstartdate,currenddate] if currstreak>maxstreak else streakrange
                 maxstreak=currstreak if currstreak>maxstreak else maxstreak 
@@ -396,8 +421,8 @@ def recapfunc():
     fig,ax=plt.subplots(figsize=(20,10))
     ax.barh(list(longeststreaks.keys()),[i['maxstreak'] for i in list(longeststreaks.values())],color=(15/255,208/255,17/255))
     ax.bar_label(ax.containers[0], label_type='edge')
-    ax.set_xlabel('User')
-    ax.set_ylabel('Longest Streak')
+    ax.set_xlabel('Longest Streak')
+    ax.set_ylabel('User')
     ax.set_title('Longest streak per user',fontsize=30)
     ax.invert_yaxis()
     fig.canvas.draw()
@@ -413,27 +438,27 @@ def recapfunc():
     if currname in chaindict:
         if chaindict[currname]<currchainlen:
                 chaindict[currname]=currchainlen
+                userchaininfo=chainend-1 #saved for later
     else:
         chaindict[currname]=currchainlen
+        userchaininfo=chainend-1 #saved for later
     chaindict=dict(sorted(chaindict.items(), key=lambda item: item[1],reverse=True))
     # print(message[chainend-maxchainlen:chainend])
     # print(message[chainend-1])
     #chain graph
     plt.clf()
     fig,ax=plt.subplots(figsize=(20,10))
-    ax.barh(list(chaindict.keys())[:10],list(chaindict.values())[:10],color=(15/255,208/255,17/255))
+    ax.barh(list(chaindict.keys()),list(chaindict.values()),color=(15/255,208/255,17/255))
     ax.bar_label(ax.containers[0], label_type='edge')
-    ax.set_xlabel('User')
-    ax.set_ylabel('Longest uninterrupted chain length')
+    ax.set_xlabel('Longest uninterrupted chain length')
+    ax.set_ylabel('User')
     ax.set_title('Longest uninterrupted chain per user',fontsize=30)
     ax.invert_yaxis()
     fig.canvas.draw()
     chaingraph=Image.fromarray(np.array(fig.canvas.renderer.buffer_rgba()))
     plt.close()
     #links counter
-    with open(txtfile,'r',encoding='utf-8') as f:
-        linklist=re.findall(r"(?:(?:https?):\/\/(?:www\.)?)?[a-zA-Z0-9@-]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:%_\+.~#?&//=]*",f.read()) # for all intents and purposes, this would work :sad:
-        f.close()
+    linklist=re.findall(r"(?:(?:https?):\/\/(?:www\.)?)?[a-zA-Z0-9@-]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:%_\+.~#?&//=]*",' '.join(message)) # for all intents and purposes, this would work :sad:
     #still have to filter because regex is not complete.
     linklist=list(filter(lambda x: '@' not in x,linklist))
     #Remember to convert to set later to count uniques links, unique subdomains,unique domains
@@ -550,7 +575,10 @@ def recapfunc():
     mediacount=len(media)
     mediausers={u:media['user'].to_list().count(u) for u in set(media['user'].to_list())}
     mediausers=dict(sorted(mediausers.items(),key= lambda item:item[1],reverse=True))
-    mediaperuser=piebar("Media sent per person",list(mediausers.values()),list(mediausers.keys()),list(mediausers.values()),"Users","Total Media")
+    if recapname.get()!="All":
+        mediaperuser=piebar("Media sent from user (%)",[mediacount,mediarank-mediacount],[recapname.get(),"Others"],[mediacount,mediarank-mediacount],'Total Media','User')
+    else:
+        mediaperuser=piebar("Media sent per person",list(mediausers.values()),list(mediausers.keys()),list(mediausers.values()),"Total Media","User")
     #emojitime!
     emodict={}
     emopeopledict={}# iwant it to be {name:{'count':int, emojis:{emoji:count,emoji:count ...}}
@@ -572,7 +600,10 @@ def recapfunc():
             else:
                 emopeopledict[user[idx]]["emojis"][i['emoji']]=1
     emopeopledict=dict(sorted(emopeopledict.items(),key= lambda item:item[1]['count'],reverse=True))
-    emoperuser=piebar(f"Emojis per person", [i['count'] for i in emopeopledict.values()],list(emopeopledict.keys()),[i['count'] for i in emopeopledict.values()],"Total Emojis","User")
+    if recapname.get()!="All":
+        emoperuser=piebar("Emojis of user (%)",[emojicount,emojirank-emojicount],[recapname.get(),"Others"],[emojicount,emojirank-emojicount],'Total Emojis','User')
+    else:
+        emoperuser=piebar(f"Emojis per person", [i['count'] for i in emopeopledict.values()],list(emopeopledict.keys()),[i['count'] for i in emopeopledict.values()],"Total Emojis","User")
     emodict=dict(sorted(emodict.items(), key=lambda item: item[1],reverse=True))
     plt.clf()
     fig,ax=plt.subplots(figsize=(20,10))
@@ -695,29 +726,35 @@ def recapfunc():
     drawline(497)
     if recapname.get()!="All":
         if len(user)/len(namerank) < 0.5:
-            drawtext((600,500),f"{recapname.get()} sent \n{len(user)*100/len(namerank):.1f}% \nof the messages",'small',"center")
+            drawtext((600,500),f"{recapname.get()}\nsent {len(user)*100/len(namerank):.1f}% \nof the messages",'small',"center")
         else:
-            drawtext((600,500),f"{recapname.get()} sent \n{len(user)*100/len(namerank):.1f}% \nof \nTHE \nMESSAGES",'small',"center")
+            drawtext((600,500),f"{recapname.get()}\nsent {len(user)*100/len(namerank):.1f}% \nof \nTHE \nMESSAGES",'small',"center")
         if sum(msglen)/sum(msglenrank) < 0.5:
-            drawtext((600,1105),f"{recapname.get()} had \n{sum(msglen)*100/sum(msglenrank):.1f}% \nof the talk ",'small',"center")
+            drawtext((600,1105),f"{recapname.get()}\nhad {sum(msglen)*100/sum(msglenrank):.1f}% \nof the talk ",'small',"center")
         else:
-            drawtext((600,1105),f"{recapname.get()} had \n{sum(msglen)*100/sum(msglenrank):.1f}% \nof THE TALK ",'small',"center")
+            drawtext((600,1105),f"{recapname.get()}\nhad {sum(msglen)*100/sum(msglenrank):.1f}% \nof THE TALK ",'small',"center")
+        drawtext((2188,500),f"{recapname.get()} \nSpammed \n{emojicount*100/emojirank:.1f}% of \nthe emojis",'small',"center")
+        drawtext((2188,2880),f"{list(mediausers.keys())[0]} \nDelivered \n{mediacount*100/mediarank:.1f}% of \nthe media",'small',"center")
+        drawtext((1588,1100),f"The\nLONGEST DAILY STREAK\n{recapname.get()}\nhad was...",'small',"center" )
+        drawtext((1588,1325),f"{list(longeststreaks.values())[0]['maxstreak']}","big","center")
+        drawtext((1588,1500),"days!", "small","center")
+        drawtext((2138,1100),f"From:\n{list(longeststreaks.values())[0]['streakrange'][0].strftime('%Y-%m-%d %H:%M')}\nto\n{list(longeststreaks.values())[0]['streakrange'][1].strftime('%Y-%m-%d %H:%M')}",'small',"center")
     else:
         drawtext((600,500),f"{list(chatdic)[0]} \nSent most of \nthe messages",'small',"center")
         drawtext((2188,500),f"{list(emopeopledict.keys())[0]} \nSpammed \nMOST of \nthe emojis",'small',"center")
+        recapimg.paste(streakgraph.resize((1100,550)),(1588,1100))
         drawtext((2138,1100),f"{list(longeststreaks.keys())[0]} \n HELD the\nLONGEST\nDAILY\nSTREAK\nFrom:\n{list(longeststreaks.values())[0]['streakrange'][0].strftime('%Y-%m-%d %H:%M')}\nto\n{list(longeststreaks.values())[0]['streakrange'][1].strftime('%Y-%m-%d %H:%M')}",'small',"center")
         drawtext((2188,2880),f"{list(mediausers.keys())[0]} \nDelivered \nMOST of \nthe media",'small',"center")
-        drawtext((1588,3600),f"This chat is now",'small',"center")
-        age=(datetime.datetime.now()-birth).days
-        drawtext((1588,3650),f"{age}",'big',"center")
-        drawtext((1588,3850),f"days old!",'small',"center")
-        drawtext((1588,3900),f"That's about {age//7} weeks or {round(age*12/365)} months or {age//365} years",'small',"center")
-        #TODO compare to human
         drawtext((600,1105),f"{list(lendic)[0]} \n Had the MOST \nto talk about",'small',"center")
+    drawtext((1588,3600),f"This chat is now",'small',"center")
+    age=(datetime.datetime.now()-birth).days
+    drawtext((1588,3650),f"{age}",'big',"center")
+    drawtext((1588,3850),f"days old!",'small',"center")
+    drawtext((1588,3900),f"That's about {age//7} weeks or {round(age*12/365)} months or {age//365} years",'small',"center")
+    #TODO compare to human
     recapimg.paste(chatsperuser.resize((1200,600)),(0,500))
     recapimg.paste(locchatsperuser.resize((1200,600)),(0,1100))
     recapimg.paste(emoperuser.resize((1200,600)),(1588,500))
-    recapimg.paste(streakgraph.resize((1100,550)),(1588,1100))
     recapimg.paste(mediaperuser.resize((1200,600)),(1588,2880))
     drawtext((0,1710),"Here are the TOP 5 LONGEST messages",'small','center')
     for msg,data in zip(toplen.keys(),toplen.values()):
@@ -788,19 +825,33 @@ def recapfunc():
     drawtext((2000,1100),f"There is a total of \n{punccount} \npunctuations used","small","center",surface=sentircap)
     drawline(1500,sentircap)
     #chain stuff
-    sentirecapimg.paste(chaingraph.resize((1200,600)),(1588,0))
-    drawtext((2188,0),f"{list(chaindict.keys())[0]}\nHad the \nLONGEST\n CONSECUTIVE\n message chain","small","center",surface=sentircap)
-    drawtext((1588,600),f"{list(chaindict.keys())[0]}'s chain started on {daytime[chainend-maxchainlen]}","small","center",surface=sentircap)
+    if recapname.get() =="All":
+        sentirecapimg.paste(chaingraph.resize((1200,600)),(1588,0))
+        drawtext((2188,0),f"{list(chaindict.keys())[0]}\nHad the \nLONGEST\n CONSECUTIVE\n message chain","small","center",surface=sentircap)
+        drawtext((1588,600),f"{list(chaindict.keys())[0]}'s chain started on {daytime[chainend-maxchainlen]}","small","center",surface=sentircap)
+        sentircap.rounded_rectangle((50+1588,750,1588+1588/2,900),fill=(217,253,211),radius=10)
+        sentircap.rounded_rectangle((50+1588+1588/2,750,1588*2,900),fill=(217,253,211),radius=10)
+        drawtext((75+1588,770),message[chainend-maxchainlen],'msg',surface=sentircap)
+        drawtext((75+1588,750),f"~{user[chainend-1]}",'name','center',surface=sentircap)
+        drawtext((1588/2-55+1588,750+150),f'{hr[chainend-maxchainlen]}:{min[chainend-maxchainlen]}','time','center',surface=sentircap)
+        drawtext((75+1588+1588/2,770),message[chainend-1],'msg',surface=sentircap)
+        drawtext((75+1588+1588/2,750),f"~{user[chainend-1]}",'name','center',surface=sentircap)
+        drawtext((1588-55+1588,750+150),f'{hr[chainend-1]}:{min[chainend-1]}','time','center',surface=sentircap)
+    else: #My most inefficient code yet.
+        drawtext((1588,0),f"{recapname.get()}'s\nLONGEST UNINTERRUPTED\nmessage chain was","small","center",surface=sentircap)
+        drawtext((1588,200),f"{chaindict[recapname.get()]}","big","center",surface=sentircap)
+        drawtext((1588,400),f"messages long!","small","center",surface=sentircap)
+        drawtext((1588,600),f"{recapname.get()}'s chain started on {dateclone.to_list()[userchaininfo-chaindict[recapname.get()]]}","small","center",surface=sentircap)
+        sentircap.rounded_rectangle((50+1588,750,1588+1588/2,900),fill=(217,253,211),radius=10)
+        sentircap.rounded_rectangle((50+1588+1588/2,750,1588*2,900),fill=(217,253,211),radius=10)
+        drawtext((75+1588,770),messageclone[chainend-maxchainlen],'msg',surface=sentircap)
+        drawtext((75+1588,750),f"~{recapname.get()}",'name','center',surface=sentircap)
+        drawtext((1588/2-55+1588,750+150),f'{dateclone.dt.strftime("%H").to_list()[chainend-maxchainlen]}:{dateclone.dt.strftime("%M")[chainend-maxchainlen]}','time','center',surface=sentircap)
+        drawtext((75+1588+1588/2,770),messageclone[chainend-1],'msg',surface=sentircap)
+        drawtext((75+1588+1588/2,750),f"~{recapname.get()}",'name','center',surface=sentircap)
+        drawtext((1588-55+1588,750+150),f'{dateclone.dt.strftime("%H").to_list()[chainend-1]}:{dateclone.dt.strftime("%M")[chainend-1]}','time','center',surface=sentircap)
     drawtext((1200,650),f"It started with:","small","left",surface=sentircap)
     drawtext((2100,650),f"And ended with:","small","left",surface=sentircap)
-    sentircap.rounded_rectangle((50+1588,750,1588+1588/2,900),fill=(217,253,211),radius=10)
-    sentircap.rounded_rectangle((50+1588+1588/2,750,1588*2,900),fill=(217,253,211),radius=10)
-    drawtext((75+1588,770),message[chainend-maxchainlen],'msg',surface=sentircap)
-    drawtext((75+1588,750),f"~{user[chainend-1]}",'name','center',surface=sentircap)
-    drawtext((1588/2-55+1588,750+150),f'{hr[chainend-maxchainlen]}:{min[chainend-maxchainlen]}','time','center',surface=sentircap)
-    drawtext((75+1588+1588/2,770),message[chainend-1],'msg',surface=sentircap)
-    drawtext((75+1588+1588/2,750),f"~{user[chainend-1]}",'name','center',surface=sentircap)
-    drawtext((1588-55+1588,750+150),f'{hr[chainend-1]}:{min[chainend-1]}','time','center',surface=sentircap)
     # Finishing up
     bg=recapimg.crop((0,0,1588*2,4150))
     bg2=sentirecapimg
@@ -809,9 +860,13 @@ def recapfunc():
     finalbg.paste(bg2,(0,bg.height))
     finalbg=finalbg.crop((0,0,1588*2,bg.height+1500))
     # tkinter stuff
-    complete.config(text=f'Recap of {group} Complete!')
+    if recapname.get()=="All":
+        complete.config(text=f'Recap of {group} Complete!')
+    else:
+        complete.config(text=f'Recap of {group} ({recapname.get()}) Complete!')
     complete.grid(row=5,column=0)
 #tkinter window
+@errorcatcher
 def selectxt(): #more than a file at a time now! Yeah!
     global txtfile, filename,names,directory,recapbutton
     if not bool(txtfile):
@@ -819,6 +874,9 @@ def selectxt(): #more than a file at a time now! Yeah!
         recapbutton.grid(row=4,column=0)
     txtfile=filedialog.askopenfilenames(initialdir=directory,title='Select WhatsApp Text File',filetypes=(("Text Files",'*.txt'),))
     print(txtfile)
+    if len(txtfile)==0:
+        return
+    filename.grid(row=3,column=0)
     if len(txtfile)>1:
         filename.config(text= f'{len(txtfile)} files have been selected')
         tf=txtfile[0]
@@ -827,7 +885,7 @@ def selectxt(): #more than a file at a time now! Yeah!
         previewimage.config(state='disabled')
         saveimage.config(state='disabled')
         recapbutton.config(command=massrecap)
-    else:
+    elif len(txtfile)==1:
         tf=txtfile=txtfile[0]
         filename.config(text=tf[-tf[::-1].index('/'):] +'\nhas been selected')
         directory=tf[:-tf[::-1].index('/')]
@@ -835,31 +893,36 @@ def selectxt(): #more than a file at a time now! Yeah!
         previewimage.config(state='normal')
         saveimage.config(state='normal')
         recapbutton.config(command=threading.Thread(target=recapfunc).start)
-    filename.grid(row=3,column=0)
-    if len(names)!=0:
-        names.clear()
-    with open(txtfile, 'r',encoding='utf-8') as chats:
-        for chat in chats.readlines():
-            try:
-                if chat[2 and 5] == '/' and chat[20:chat.index(':',20)] not in names:
-                    names.append(chat[20:chat.index(':',20)])
-            except (IndexError, ValueError): 
-                continue
-        chats.close()
-    names=['All']+sorted(names)
-    recapname.set('All')
-    #IDK how, but it works
-    namefilter['menu'].delete(0, 'end')
-    # Insert list of new options (tk._setit hooks them up to var)
-    for i in names:
-       namefilter['menu'].add_command(label=i, command=tk._setit(recapname, i))
-    return txtfile
+        if len(names)!=0:
+            names.clear()
+        with open(txtfile, 'r',encoding='utf-8') as chats:
+            for chat in chats.readlines():
+                try:
+                    if chat[2 and 5] == '/' and chat[20:chat.index(':',20)] not in names:
+                        names.append(chat[20:chat.index(':',20)])
+                except (IndexError, ValueError): 
+                    continue
+            chats.close()
+        names=['All']+sorted(names)
+        recapname.set('All')
+        #IDK how, but it works
+        namefilter['menu'].delete(0, 'end')
+        # Insert list of new options (tk._setit hooks them up to var)
+        for i in names:
+            namefilter['menu'].add_command(label=i, command=tk._setit(recapname, i))
+        return txtfile # What was this for?
+@errorcatcher
 def imgshow():
     global finalbg
     finalbg.show()
+@errorcatcher
 def saverecap():
     global finalbg
-    finalbg.save(f"{group} Whatsapp Recap.png")
+    if recapname.get()=="All":
+        finalbg.save(f"{group} Whatsapp Recap.png")
+    else: 
+        finalbg.save(f"{group} ({recapname.get()}) Whatsapp Recap.png")
+    messagebox.showinfo("Saved!", "What the title says! :D")
 Title=tk.Label(root,text="Whatsapp Recap",font=(canvafont,50), fg='#0fd012').grid(row=0,column=0)
 mascot1=tk.Label(root,image=mascots[0]).grid(row=1,column=0)
 select= tk.Button(root,text='Select WhatsApp Text File',font=(canvafont,17),fg='#0fd012',bg='light green',image=mascots[2],compound=tk.LEFT,command=selectxt)
