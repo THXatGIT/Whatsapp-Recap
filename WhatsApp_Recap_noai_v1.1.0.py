@@ -91,7 +91,7 @@ root=tk.Tk()
 # get images
 mascots=[ImageTk.PhotoImage(Image.open(resource_path(f"mascot/Whatsapp Recap Mascot{i}.png")).resize((90,78))) for i in range(1,6)]
 root.wm_iconphoto(True, mascots[0])
-root.title('WhatsApp Recap noai v1.1.0')
+root.title('WhatsApp Recap noai v1.2.0-beta2')
 root.geometry('1920x1080')
 table=None
 txtfile=''
@@ -155,10 +155,10 @@ def recapfunc():
     complete.config(text='Starting Recap...') # Threading done! Msg1
     complete.grid(row=5,column=0)
     plt.rcParams['font.family']="sans-serif"
-    fm.fontManager.addfont("fonts/STKaiti.ttf")
-    fm.fontManager.addfont("fonts/arial.ttf")
-    f1 = fm.FontProperties(fname='fonts/arial.ttf')
-    f2=fm.FontProperties(fname='fonts/STKaiti.ttf')
+    fm.fontManager.addfont(kaiti)
+    fm.fontManager.addfont(arial)
+    f1 = fm.FontProperties(fname=arial)
+    f2=fm.FontProperties(fname=kaiti)
     print([f1.get_name(),f2.get_name()])
     plt.rcParams["font.sans-serif"]=[f2.get_name()]
     #---
