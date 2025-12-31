@@ -91,7 +91,7 @@ root=tk.Tk()
 # get images
 mascots=[ImageTk.PhotoImage(Image.open(resource_path(f"mascot/Whatsapp Recap Mascot{i}.png")).resize((90,78))) for i in range(1,6)]
 root.wm_iconphoto(True, mascots[0])
-root.title('WhatsApp Recap noai v1.2.0-beta2')
+root.title('WhatsApp Recap noai v1.2.0-beta2.1')
 root.geometry('1920x1080')
 table=None
 txtfile=''
@@ -683,10 +683,10 @@ def recapfunc():
     drawtext((0,250),f"{len(message)}",'big')
     drawtext((1588,250),f"{emojicount}",'big')
     drawtext((1588,2580),f"{mediacount}",'big')
+    drawtext((1588,425),"emojis used!",'small')
+    drawtext((1588,2805),"medias sent!",'small')
     if recapfilter.get()==1:
         drawtext((0,425),"overall conversations!",'small')
-        drawtext((1588,425),"emojis used!",'small')
-        drawtext((1588,2805),"medias sent!",'small')
     elif recapfilter.get()==2:
         if prevfilter.get()!="Day":
             drawtext((0,425),f"conversations last {prevfilter.get().lower()}!",'small')
@@ -741,10 +741,16 @@ def recapfunc():
         drawtext((2138,1100),f"From:\n{list(longeststreaks.values())[0]['streakrange'][0].strftime('%Y-%m-%d %H:%M')}\nto\n{list(longeststreaks.values())[0]['streakrange'][1].strftime('%Y-%m-%d %H:%M')}",'small',"center")
     else:
         drawtext((600,500),f"{list(chatdic)[0]} \nSent most of \nthe messages",'small',"center")
-        drawtext((2188,500),f"{list(emopeopledict.keys())[0]} \nSpammed \nMOST of \nthe emojis",'small',"center")
+        try:
+            drawtext((2188,500),f"{list(emopeopledict.keys())[0]} \nSpammed \nMOST of \nthe emojis",'small',"center")
+        except IndexError:
+            drawtext((2188,500),f"Zilch, None,\nNIL, NULL,\n0 emojis.",'small',"center")
         recapimg.paste(streakgraph.resize((1100,550)),(1588,1100))
         drawtext((2138,1100),f"{list(longeststreaks.keys())[0]} \n HELD the\nLONGEST\nDAILY\nSTREAK\nFrom:\n{list(longeststreaks.values())[0]['streakrange'][0].strftime('%Y-%m-%d %H:%M')}\nto\n{list(longeststreaks.values())[0]['streakrange'][1].strftime('%Y-%m-%d %H:%M')}",'small',"center")
-        drawtext((2188,2880),f"{list(mediausers.keys())[0]} \nDelivered \nMOST of \nthe media",'small',"center")
+        try:
+            drawtext((2188,2880),f"{list(mediausers.keys())[0]} \nDelivered \nMOST of \nthe media",'small',"center")
+        except:
+            drawtext((2188,2880),f"0TB, 0GB,\n0MB, 0KB, 0B\nof media",'small',"center")
         drawtext((600,1105),f"{list(lendic)[0]} \n Had the MOST \nto talk about",'small',"center")
     drawtext((1588,3600),f"This chat is now",'small',"center")
     age=(datetime.datetime.now()-birth).days
